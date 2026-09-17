@@ -1,0 +1,88 @@
+name: Dependencies
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+    tags: ['v*']
+  schedule:
+    - cron: '17 5 * * *'
+  workflow_dispatch:
+  workflow_call:
+    inputs:
+      revision:
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    name: Dependency audit / Boot ${{ matrix.boot }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        boot: ['4.0.8', '4.1.1']
+    env:
+      BOOT_VERSION: ${{ matrix.boot }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ inputs.revision || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@4733eaac7c1b0da527e4206b7671e0061de1ce37 # v6
+        with:
+          cache-provider: basic
+      - name: Install checksum-verified OSV-Scanner
+        run: bash scripts/ci/install-security-tools.sh osv-scanner "$RUNNER_TEMP/security-tools"
+      - name: Build artifacts and inventory library dependencies
+        run: |
+          ./gradlew --no-daemon --console=plain --stacktrace -PbootVersion="$BOOT_VERSION" \
+            -I scripts/ci/dependency-sbom.init.gradle.kts dependencySbom \
+            publishAllPublicationsToBuildRepositoryRepository
+      - name: Inventory Gradle consumer dependencies
+        run: |
+          ./gradlew --no-daemon --console=plain --refresh-dependencies -p samples/minimal \
+            -I "$PWD/scripts/ci/dependency-sbom.init.gradle.kts" dependencySbom -PbootVersion="$BOOT_VERSION"
+      - name: Inventory Maven consumer dependencies
+        run: |
+          mvn -B -ntp -f samples/minimal/pom.xml -Dboot.version="$BOOT_VERSION" \
+            -Dmaven.repo.local="$RUNNER_TEMP/maven-audit" \
+            org.apache.maven.plugins:maven-dependency-plugin:3.11.0:tree \
+            -Dscope=runtime -DoutputType=json -DoutputFile=target/dependencies.json
+          python3 scripts/ci/maven-sbom.py samples/minimal/target/dependencies.json build/reports/security/maven.cdx.json
+      - name: Fail on known vulnerabilities or scanner errors
+        run: |
+          "$RUNNER_TEMP/security-tools/osv-scanner" scan source \
+            --lockfile=build/reports/security/runtime.cdx.json \
+            --lockfile=samples/minimal/build/reports/security/runtime.cdx.json \
+            --lockfile=build/reports/security/maven.cdx.json \
+            --format=json --all-packages --output-file=build/reports/security/osv.json
+      - name: Upload inventories and scan results
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: dependencies-boot-${{ matrix.boot }}
+          path: |
+            build/reports/security/
+            samples/minimal/build/reports/security/
+            samples/minimal/target/dependencies.json
+          retention-days: 14
+
+  gate:
+    name: Dependencies passed
+    if: always()
+    needs: audit
+    runs-on: ubuntu-24.04
+    timeout-minutes: 1
+    env:
+      AUDIT_RESULT: ${{ needs.audit.result }}
+    steps:
+      - run: test "$AUDIT_RESULT" = success

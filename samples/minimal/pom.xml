@@ -10,14 +10,15 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <boot.version>4.0.8</boot.version>
     <starter.repository>${project.basedir}/../../build/repository</starter.repository>
+    <starter.repository.url>file://${starter.repository}</starter.repository.url>
   </properties>
-  <repositories><repository><id>starter-build</id><url>file://${starter.repository}</url></repository></repositories>
+  <repositories><repository><id>starter-build</id><url>${starter.repository.url}</url></repository></repositories>
   <dependencyManagement><dependencies><dependency>
     <groupId>org.springframework.boot</groupId><artifactId>spring-boot-dependencies</artifactId><version>${boot.version}</version>
     <type>pom</type><scope>import</scope>
   </dependency></dependencies></dependencyManagement>
   <dependencies><dependency>
-    <groupId>io.github.madduck-tech</groupId><artifactId>ydb-spring-boot-starter</artifactId><version>0.1.0</version>
+    <groupId>io.github.madduck-tech</groupId><artifactId>ydb-spring-boot-starter</artifactId><version>0.1.1</version>
   </dependency></dependencies>
   <build><plugins>
     <plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-compiler-plugin</artifactId><version>3.14.1</version></plugin>

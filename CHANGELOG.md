@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.1 — 2026-09-17
+
+- Align the SDK's gRPC dependencies to 1.75.0 in Gradle and Maven, removing the shaded Netty dependency affected by CVE-2025-55163 (MadeYouReset). The advisory describes an HTTP/2 server denial of service; exploitability in this client integration has not been established.
+- Add OSV dependency inventories and scans for both supported Boot lines, redacted Gitleaks history scans, daily rechecks, Dependabot, and workflow status badges.
+- Add manual GitHub Packages publication of all three modules, guarded by annotated tag/version checks, successful CI for the exact commit, and fresh security scans. Gradle and Maven consume the uploaded packages against YDB after publication.
+
 ## 0.1.0 — 2026-09-17
 
 First source release. Package publication is not configured yet.
