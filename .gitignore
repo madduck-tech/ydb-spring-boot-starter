@@ -1,16 +1,8 @@
-# Compiled class file
+# Java and build outputs
 *.class
-
-# Log file
 *.log
-
-# BlueJ files
 *.ctxt
-
-# Mobile Tools for Java (J2ME)
 .mtj.tmp/
-
-# Package Files #
 *.jar
 *.war
 *.nar
@@ -18,7 +10,39 @@
 *.zip
 *.tar.gz
 *.rar
-
-# virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
+!gradle/wrapper/gradle-wrapper.jar
 hs_err_pid*
 replay_pid*
+.gradle/
+.kotlin/
+**/build/
+**/target/
+out/
+
+# Local development
+.idea/
+*.iml
+.vscode/
+.DS_Store
+.env
+.env.*
+!.env.example
+
+# Local assistant instructions, state, and generated work files
+.agents/
+.agent/
+.codex/
+.claude/
+.cursor/
+.artifacts/
+.worktrees/
+AGENTS.md
+AGENTS.local.md
+CLAUDE.md
+CLAUDE.local.md
+GEMINI.md
+.aider*
+.plannotator/
+
+# Private initial research; public design belongs in docs/
+/ydb-spring-boot-starter-2026-09-17.md

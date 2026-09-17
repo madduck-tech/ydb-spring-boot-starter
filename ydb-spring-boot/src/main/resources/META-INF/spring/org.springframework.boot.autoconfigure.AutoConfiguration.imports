@@ -1,0 +1,4 @@
+io.github.madducktech.ydb.boot.YdbAutoConfiguration
+io.github.madducktech.ydb.boot.YdbTemplateAutoConfiguration
+io.github.madducktech.ydb.boot.YdbTransactionAutoConfiguration
+io.github.madducktech.ydb.boot.YdbHealthAutoConfiguration

@@ -1,0 +1,13 @@
+name: ydb-spring-starter-tests
+services:
+  ydb:
+    platform: linux/amd64
+    image: ydbplatform/local-ydb@sha256:c3e49c078a560d4957ff492ed7025864ee33a405d03a02c4fdb30c20e7c42925
+    hostname: localhost
+    ports:
+      - "127.0.0.1:2136:2136"
+    environment:
+      GRPC_PORT: "2136"
+      YDB_GRPC_ENABLE_TLS: "0"
+      YDB_USE_IN_MEMORY_PDISKS: "1"
+      YDB_DEFAULT_LOG_LEVEL: ERROR
