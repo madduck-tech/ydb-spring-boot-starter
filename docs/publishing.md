@@ -8,7 +8,7 @@ GitHub's Maven registry requires authentication even for public packages. Locall
 a personal access token **(classic)** with `read:packages`, belonging to an account
 with access to the repository. Export `GITHUB_ACTOR` as that account's login and
 `GITHUB_TOKEN` as the token through your secret manager or shell environment. Never
-commit credentials. This repository is currently private, so repository access is required.
+commit credentials. The repository is public; GitHub Packages still requires authentication.
 
 ## Gradle
 
@@ -67,6 +67,7 @@ Merge this server into your local `~/.m2/settings.xml`, outside version control:
 
 1. Update the root version, both sample builds, README, and changelog in a pull request.
    Require successful **CI passed**, **Dependencies passed**, and **Secrets passed** checks.
+   Obtain one approving review, resolve discussions, and keep the branch up to date with `main`.
 2. Merge to `main`, create an annotated `vMAJOR.MINOR.PATCH` tag on the release commit,
    and push it. Wait for the tag's CI workflow to succeed.
 3. Dispatch the publishing workflow from `main`, for example:
