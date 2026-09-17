@@ -5,7 +5,7 @@ val testJava = providers.gradleProperty("testJava").getOrElse("17").toInt()
 
 allprojects {
     group = "io.github.madduck-tech"
-    version = "0.1.0"
+    version = "0.1.1"
     repositories { mavenCentral() }
 }
 
@@ -69,8 +69,26 @@ subprojects {
                 }
             }
         }
-        repositories { maven { name = "buildRepository"; url = rootProject.layout.buildDirectory.dir("repository").get().asFile.toURI() } }
+        repositories {
+            maven { name = "buildRepository"; url = rootProject.layout.buildDirectory.dir("repository").get().asFile.toURI() }
+            maven {
+                name = "GitHubPackages"
+                url = uri("https://maven.pkg.github.com/madduck-tech/ydb-spring-boot-starter")
+                credentials {
+                    username = providers.environmentVariable("GITHUB_ACTOR").orNull
+                    password = providers.environmentVariable("GITHUB_TOKEN").orNull
+                }
+            }
+        }
     }
 }
 
 tasks.wrapper { gradleVersion = "9.5.1"; distributionType = Wrapper.DistributionType.BIN }
+
+tasks.register("verifyReleaseVersion") {
+    doLast {
+        val tag = providers.environmentVariable("RELEASE_TAG").get()
+        check(tag == "v${project.version}") { "Release tag $tag does not match project version ${project.version}" }
+        check(subprojects.all { it.version == project.version }) { "Module versions must match" }
+    }
+}

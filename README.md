@@ -1,8 +1,12 @@
 # YDB Spring Boot Starter
 
+[![CI](https://github.com/madduck-tech/ydb-spring-boot-starter/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/madduck-tech/ydb-spring-boot-starter/actions/workflows/ci.yml)
+[![Dependencies](https://github.com/madduck-tech/ydb-spring-boot-starter/actions/workflows/dependencies.yml/badge.svg?branch=main)](https://github.com/madduck-tech/ydb-spring-boot-starter/actions/workflows/dependencies.yml)
+[![Secrets](https://github.com/madduck-tech/ydb-spring-boot-starter/actions/workflows/secrets.yml/badge.svg?branch=main)](https://github.com/madduck-tech/ydb-spring-boot-starter/actions/workflows/secrets.yml)
+
 Community integration of the native YDB Java SDK with Spring Boot: SDK beans, a synchronous `YdbTemplate`, and Spring `@Transactional` support.
 
-The first source release is **0.1.0**. Maven Central publication and namespace verification are pending; the artifacts are currently built locally. The target is Java 17, 21, and 25 with Spring Boot 4.0/4.1. Library bytecode targets Java 17. See the [changelog](CHANGELOG.md) for the release scope.
+The current version is **0.1.1**, targeting Java 17, 21, and 25 with Spring Boot 4.0/4.1. Library bytecode targets Java 17. Packages are distributed through authenticated GitHub Packages; see [installation and release instructions](docs/publishing.md) and the [changelog](CHANGELOG.md). Maven Central publication is not configured.
 
 The initial implementation has been exercised with SDK 2.4.11 and YDB 26.1.1.22. A standalone Gradle consumer verified commit/rollback from the same built artifacts on every Java 17/21/25 and Boot 4.0.8/4.1.1 combination. Maven consumption was also checked on both Boot lines. These checks cover the scenarios in this repository, not every authentication provider or failure mode in the release plan.
 
@@ -14,7 +18,7 @@ The initial implementation has been exercised with SDK 2.4.11 and YDB 26.1.1.22.
 | `ydb-spring-boot` | Properties, SDK lifecycle, bean overrides, optional health |
 | `ydb-spring-boot-starter` | Dependency set for applications |
 
-Proposed coordinates: `io.github.madduck-tech:ydb-spring-boot-starter`. Apache License 2.0.
+Coordinates: `io.github.madduck-tech:ydb-spring-boot-starter:0.1.1`. Apache License 2.0.
 
 ## Configuration
 
@@ -86,7 +90,9 @@ Without `YDB_TEST_CONNECTION`, the real database test is skipped; unit and confi
 - The Java 17 build publishes a temporary Maven repository. Independent Gradle and Maven consumers verify commit/rollback using those same artifacts on all six Java 17/21/25 × Spring Boot 4.0.8/4.1.1 combinations.
 - Test reports and YDB/consumer logs are retained for seven days. Superseded runs are cancelled.
 
-The stable aggregate check is **CI passed**. Select it as a required status check in the GitHub branch ruleset for `main` to block merging when any job fails or is skipped. The workflow does not configure repository rules or publish to Maven Central.
+Separate workflows scan resolved production dependencies with OSV-Scanner and Git history with Gitleaks on pull requests, main/tag pushes, and a daily schedule. Dependabot proposes dependency and Action updates. See [security checks and their scope](docs/security.md).
+
+The stable checks are **CI passed**, **Dependencies passed**, and **Secrets passed**. Select all three as required status checks in a branch ruleset for `main`, where the repository's GitHub plan supports rulesets. These workflows do not configure repository rules. Badges show actual workflow status; badges for private repositories cannot be shared externally without repository access.
 
 Consumer CI refreshes Gradle dependencies and uses an empty Maven local repository so that a previous build of the same release version cannot pass in place of the current artifacts. When repeatedly rebuilding the same version locally, also select a fresh Maven local repository with `-Dmaven.repo.local=...`.
 
