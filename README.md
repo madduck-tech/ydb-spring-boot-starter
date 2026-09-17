@@ -10,6 +10,89 @@ The current version is **0.1.1**, targeting Java 17, 21, and 25 with Spring Boot
 
 The initial implementation has been exercised with SDK 2.4.11 and YDB 26.1.1.22. A standalone Gradle consumer verified commit/rollback from the same built artifacts on every Java 17/21/25 and Boot 4.0.8/4.1.1 combination. Maven consumption was also checked on both Boot lines. These checks cover the scenarios in this repository, not every authentication provider or failure mode in the release plan.
 
+## Add to your project
+
+Start with an existing **Spring Boot 4** application using **Java 17, 21, or 25**. Add the repository and starter dependency using one of the examples below, then [configure the YDB connection](#configuration).
+
+### Authenticate to GitHub Packages
+
+GitHub's Maven registry requires authentication even for public packages. Create a [personal access token (classic)](https://github.com/settings/tokens) with **`read:packages`** and provide these environment variables to your build:
+
+| Variable | Value |
+| --- | --- |
+| `GITHUB_ACTOR` | Your GitHub login |
+| `GITHUB_TOKEN` | Your personal access token (classic) with `read:packages` |
+
+Set the token through your secret manager, shell environment, or CI secrets; keep it out of source control. See [GitHub Packages authentication](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-gradle-registry#authenticating-to-github-packages) and [CI access details](docs/publishing.md).
+
+### Gradle (Kotlin DSL)
+
+Merge into your application's `build.gradle.kts`:
+
+```kotlin
+repositories {
+    mavenCentral()
+    maven {
+        url = uri("https://maven.pkg.github.com/madduck-tech/ydb-spring-boot-starter")
+        credentials {
+            username = providers.environmentVariable("GITHUB_ACTOR").orNull
+            password = providers.environmentVariable("GITHUB_TOKEN").orNull
+        }
+        content { includeGroup("io.github.madduck-tech") }
+    }
+}
+dependencies {
+    implementation("io.github.madduck-tech:ydb-spring-boot-starter:0.1.1")
+}
+```
+
+### Maven
+
+Merge into your application's `pom.xml`:
+
+```xml
+<repositories>
+  <repository>
+    <id>starter-build</id>
+    <url>https://maven.pkg.github.com/madduck-tech/ydb-spring-boot-starter</url>
+  </repository>
+</repositories>
+<dependencies>
+  <dependency>
+    <groupId>io.github.madduck-tech</groupId>
+    <artifactId>ydb-spring-boot-starter</artifactId>
+    <version>0.1.1</version>
+  </dependency>
+</dependencies>
+```
+
+Merge the matching server into your local `~/.m2/settings.xml` (outside the project):
+
+```xml
+<settings>
+  <servers>
+    <server>
+      <id>starter-build</id>
+      <username>${env.GITHUB_ACTOR}</username>
+      <password>${env.GITHUB_TOKEN}</password>
+    </server>
+  </servers>
+</settings>
+```
+
+### Configure YDB
+
+For a local YDB instance, add to your application's `application.yml`:
+
+```yaml
+ydb:
+  connection-string: grpc://localhost:2136/local
+  auth:
+    mode: anonymous
+```
+
+Use your database endpoint and authentication mode for a remote database; see [configuration](#configuration). The starter auto-configures SDK beans, `YdbTemplate`, and a transaction manager. See [transactions](#transactions) for using `@Transactional`.
+
 ## Modules
 
 | Module | Contents |
@@ -92,7 +175,7 @@ Without `YDB_TEST_CONNECTION`, the real database test is skipped; unit and confi
 
 Separate workflows scan resolved production dependencies with OSV-Scanner and Git history with Gitleaks on pull requests, main/tag pushes, and a daily schedule. Dependabot proposes dependency and Action updates. See [security checks and their scope](docs/security.md).
 
-The stable checks are **CI passed**, **Dependencies passed**, and **Secrets passed**. Select all three as required status checks in a branch ruleset for `main`, where the repository's GitHub plan supports rulesets. These workflows do not configure repository rules. Badges show actual workflow status; badges for private repositories cannot be shared externally without repository access.
+The [active protection rule for `main`](https://github.com/madduck-tech/ydb-spring-boot-starter/rules/23615959) requires **CI passed**, **Dependencies passed**, and **Secrets passed** from GitHub Actions. Changes must use a pull request with one approving review, resolved discussions, and an up-to-date base. New reviewable commits dismiss previous approvals. Direct pushes, force pushes, and branch deletion are blocked, with no bypass actors. Badges show actual workflow status.
 
 Consumer CI refreshes Gradle dependencies and uses an empty Maven local repository so that a previous build of the same release version cannot pass in place of the current artifacts. When repeatedly rebuilding the same version locally, also select a fresh Maven local repository with `-Dmaven.repo.local=...`.
 
