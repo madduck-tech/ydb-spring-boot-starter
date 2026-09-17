@@ -5,7 +5,7 @@ val testJava = providers.gradleProperty("testJava").getOrElse("17").toInt()
 
 allprojects {
     group = "io.github.madduck-tech"
-    version = "0.1.0-SNAPSHOT"
+    version = "0.1.0"
     repositories { mavenCentral() }
 }
 

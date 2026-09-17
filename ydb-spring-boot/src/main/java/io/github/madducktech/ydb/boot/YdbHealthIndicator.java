@@ -28,8 +28,7 @@ final class YdbHealthIndicator implements HealthIndicator {
         try { return current.deadline.await(current.result); }
         catch (RuntimeException ex) {
             current.expired.set(true);
-            QueryStream stream = current.stream.get();
-            if (stream != null) { try { stream.cancel(); } catch (RuntimeException ignored) { } }
+            current.cancel();
             return Health.down().withDetail("reason", "probe unavailable or timed out").build();
         }
     }
@@ -39,6 +38,35 @@ final class YdbHealthIndicator implements HealthIndicator {
         final CompletableFuture<Health> result = new CompletableFuture<>();
         final AtomicBoolean expired = new AtomicBoolean();
         final AtomicReference<QueryStream> stream = new AtomicReference<>();
+        private boolean cancelling;
+        private Runnable deferredCompletion;
+
+        synchronized void cancel() {
+            QueryStream query = stream.get();
+            if (query == null) return;
+            cancelling = true;
+            try { query.cancel(); } catch (RuntimeException ignored) { }
+            finally {
+                cancelling = false;
+                if (deferredCompletion != null) {
+                    Runnable completion = deferredCompletion;
+                    deferredCompletion = null;
+                    completion.run();
+                }
+            }
+        }
+
+        synchronized void completed(QuerySession session, boolean success) {
+            stream.set(null);
+            Runnable completion = () -> {
+                boolean cleaned = close(session);
+                if (success && cleaned && !expired.get()) result.complete(Health.up().build()); else down();
+            };
+            // SDK cancellation may synchronously complete the future. Do not recycle
+            // its session until cancel() has returned, or cancel an already recycled session.
+            if (cancelling) deferredCompletion = completion;
+            else completion.run();
+        }
 
         void start() {
             try {
@@ -51,12 +79,10 @@ final class YdbHealthIndicator implements HealthIndicator {
                                 ExecuteQuerySettings.newBuilder().withRequestTimeout(deadline.remaining()).build());
                         stream.set(query);
                         var execution = query.execute();
-                        if (expired.get()) query.cancel();
                         execution.whenComplete((response, queryError) -> {
-                            boolean success = queryError == null && response != null && response.isSuccess() && !expired.get();
-                            boolean cleaned = close(session);
-                            if (success && cleaned) result.complete(Health.up().build()); else down();
+                            completed(session, queryError == null && response != null && response.isSuccess());
                         });
+                        if (expired.get()) cancel();
                     } catch (RuntimeException ex) { close(session); down(); }
                 });
             } catch (RuntimeException ex) { down(); }

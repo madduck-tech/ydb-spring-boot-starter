@@ -4,6 +4,7 @@ on:
   pull_request:
   push:
     branches: [main]
+    tags: ['v*']
   merge_group:
   workflow_dispatch:
 
@@ -119,8 +120,6 @@ jobs:
         with:
           distribution: temurin
           java-version: ${{ matrix.java }}
-          cache: maven
-          cache-dependency-path: samples/minimal/pom.xml
       - name: Set up Gradle and validate wrapper
         uses: gradle/actions/setup-gradle@4733eaac7c1b0da527e4206b7671e0061de1ce37 # v6
         with:
@@ -134,12 +133,13 @@ jobs:
       - name: Verify Gradle consumer commit and rollback
         run: |
           mkdir -p build/ci
-          ./gradlew --no-daemon --console=plain --stacktrace -p samples/minimal run \
+          ./gradlew --no-daemon --console=plain --stacktrace --refresh-dependencies -p samples/minimal run \
             -PruntimeJava="$RUNTIME_JAVA" -PbootVersion="$BOOT_VERSION" 2>&1 | tee build/ci/gradle-consumer.log
       - name: Verify Maven consumer commit and rollback
         run: |
           mkdir -p build/ci
-          mvn -B -ntp -U -f samples/minimal/pom.xml -Dboot.version="$BOOT_VERSION" \
+          mvn -B -ntp -f samples/minimal/pom.xml -Dboot.version="$BOOT_VERSION" \
+            -Dmaven.repo.local="$RUNNER_TEMP/maven-consumer" \
             compile exec:java 2>&1 | tee build/ci/maven-consumer.log
       - name: Collect YDB logs
         if: always()

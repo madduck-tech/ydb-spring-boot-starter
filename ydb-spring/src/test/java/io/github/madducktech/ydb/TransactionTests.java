@@ -151,6 +151,60 @@ class TransactionTests {
         verify(session).close();
         verify(session, never()).beginTransaction(any(), any());
     }
+    @Test void inactiveSdkTransactionCannotDispatchAnotherQuery() {
+        assertThatThrownBy(() -> transactions.executeWithoutResult(status -> {
+            sessions.get(0).active.set(false);
+            ydb.execute("must not restart", Params.empty());
+        })).isInstanceOf(TransactionSystemException.class);
+        verify(sessions.get(0).tx, never()).createQuery(anyString(), anyBoolean(), any(), any());
+        verify(sessions.get(0).tx, never()).commit(any());
+        verify(sessions.get(0).session).close();
+    }
+    @Test void lateBeginRollsBackBeforeReleasingSession() {
+        Session session = new Session();
+        CompletableFuture<Result<QueryTransaction>> begin = new CompletableFuture<>();
+        CompletableFuture<Status> rollback = new CompletableFuture<>();
+        when(client.createSession(any())).thenReturn(CompletableFuture.completedFuture(Result.success(session.session)));
+        when(session.session.beginTransaction(any(), any())).thenReturn(begin);
+        doReturn(rollback).when(session.tx).rollback(any());
+        assertThatThrownBy(() -> ydb.execute("query", Params.empty(), new YdbQueryOptions(Duration.ofMillis(50), null, null)))
+                .isInstanceOf(org.springframework.dao.QueryTimeoutException.class);
+        verify(session.session, never()).close();
+        begin.complete(Result.success(session.tx));
+        verify(session.tx).rollback(any());
+        verify(session.session, never()).close();
+        rollback.complete(Status.SUCCESS);
+        verify(session.session).close();
+    }
+    @Test void queryTimeoutWaitsForTerminalResponseBeforeCleanup() {
+        Session session = new Session();
+        CompletableFuture<Result<QueryInfo>> query = new CompletableFuture<>();
+        when(client.createSession(any())).thenReturn(CompletableFuture.completedFuture(Result.success(session.session)));
+        when(session.stream.execute(any())).thenReturn(query);
+        YdbTemplate bounded = new YdbTemplate(client, YdbQueryOptions.DEFAULT, Duration.ofMillis(20));
+        assertThatThrownBy(() -> bounded.execute("query", Params.empty(), new YdbQueryOptions(Duration.ofMillis(50), null, null)))
+                .isInstanceOf(org.springframework.dao.QueryTimeoutException.class);
+        verify(session.stream).cancel();
+        verify(session.tx, never()).rollback(any());
+        verify(session.session, never()).close();
+        query.complete(Result.success(new QueryInfo(null)));
+        verify(session.tx).rollback(any());
+        verify(session.tx, never()).commit(any());
+        verify(session.session).close();
+    }
+    @Test void lateCommitRemainsUnknownAndOnlyReleasesSession() {
+        Session session = new Session();
+        CompletableFuture<Result<QueryInfo>> commit = new CompletableFuture<>();
+        when(client.createSession(any())).thenReturn(CompletableFuture.completedFuture(Result.success(session.session)));
+        doReturn(commit).when(session.tx).commit(any());
+        assertThatThrownBy(() -> ydb.execute("query", Params.empty(), new YdbQueryOptions(Duration.ofMillis(100), null, null)))
+                .isInstanceOf(YdbCommitOutcomeUnknownException.class);
+        verify(session.session, never()).close();
+        commit.complete(Result.success(new QueryInfo(null)));
+        verify(session.tx).commit(any());
+        verify(session.tx, never()).rollback(any());
+        verify(session.session).close();
+    }
     @Test void mandatoryAndNeverHaveSpringSemantics() {
         transactions.setPropagationBehavior(TransactionDefinition.PROPAGATION_MANDATORY);
         assertThatThrownBy(() -> transactions.executeWithoutResult(s -> {})).isInstanceOf(IllegalTransactionStateException.class);

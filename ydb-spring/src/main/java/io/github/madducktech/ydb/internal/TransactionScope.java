@@ -78,6 +78,7 @@ public final class TransactionScope {
             throw new UnexpectedRollbackException("YDB transaction is no longer usable");
         }
         if (executing) throw new IllegalStateException("Overlapping or reentrant YDB template operations are not supported");
+        verifyActive();
         executing = true;
     }
     public void leave() { executing = false; }

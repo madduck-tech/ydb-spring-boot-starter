@@ -2,7 +2,7 @@
 
 Community integration of the native YDB Java SDK with Spring Boot: SDK beans, a synchronous `YdbTemplate`, and Spring `@Transactional` support.
 
-This repository is under development. Maven Central publication and namespace verification are pending. The initial target is Java 17, 21, and 25 with Spring Boot 4.0/4.1. Library bytecode targets Java 17.
+The first source release is **0.1.0**. Maven Central publication and namespace verification are pending; the artifacts are currently built locally. The target is Java 17, 21, and 25 with Spring Boot 4.0/4.1. Library bytecode targets Java 17. See the [changelog](CHANGELOG.md) for the release scope.
 
 The initial implementation has been exercised with SDK 2.4.11 and YDB 26.1.1.22. A standalone Gradle consumer verified commit/rollback from the same built artifacts on every Java 17/21/25 and Boot 4.0.8/4.1.1 combination. Maven consumption was also checked on both Boot lines. These checks cover the scenarios in this repository, not every authentication provider or failure mode in the release plan.
 
@@ -61,7 +61,7 @@ Install Java 17 for the compiler toolchain and the desired runtime JDK. Build lo
 ./gradlew build
 ./gradlew publishAllPublicationsToBuildRepositoryRepository
 docker compose up -d --wait --wait-timeout 180
-./gradlew -p samples/minimal run
+./gradlew --refresh-dependencies -p samples/minimal run
 ```
 
 The example consumes published files from `build/repository`, creates a uniquely named temporary table, verifies commit and rollback, and drops that table. The pinned local YDB container binds only to localhost; its amd64 image runs under emulation on ARM hosts. It stores test data in memory.
@@ -70,7 +70,7 @@ Run the real database test and select a JVM:
 
 ```sh
 YDB_TEST_CONNECTION=grpc://localhost:2136/local ./gradlew test -PtestJava=17
-./gradlew -p samples/minimal run -PruntimeJava=21 -PbootVersion=4.1.1
+./gradlew --refresh-dependencies -p samples/minimal run -PruntimeJava=21 -PbootVersion=4.1.1
 mvn -f samples/minimal/pom.xml compile exec:java
 docker compose down
 ```
@@ -79,7 +79,7 @@ Without `YDB_TEST_CONNECTION`, the real database test is skipped; unit and confi
 
 ## Pull request checks
 
-[GitHub Actions](.github/workflows/ci.yml) runs on every pull request, push to `main`, merge queue entry, and manual dispatch:
+[GitHub Actions](.github/workflows/ci.yml) runs on every pull request, push to `main` or a `v*` tag, merge queue entry, and manual dispatch:
 
 - Actionlint validates workflows; Docker Compose configuration and commit whitespace are checked.
 - Gradle validates the wrapper, builds all modules including Javadoc, and runs all tests against a real YDB container on Java 17, 21, and 25. CI fails on missing reports or skipped tests.
@@ -87,6 +87,8 @@ Without `YDB_TEST_CONNECTION`, the real database test is skipped; unit and confi
 - Test reports and YDB/consumer logs are retained for seven days. Superseded runs are cancelled.
 
 The stable aggregate check is **CI passed**. Select it as a required status check in the GitHub branch ruleset for `main` to block merging when any job fails or is skipped. The workflow does not configure repository rules or publish to Maven Central.
+
+Consumer CI refreshes Gradle dependencies and uses an empty Maven local repository so that a previous build of the same release version cannot pass in place of the current artifacts. When repeatedly rebuilding the same version locally, also select a fresh Maven local repository with `-Dmaven.repo.local=...`.
 
 To reproduce the build check locally, start YDB as above, then run:
 

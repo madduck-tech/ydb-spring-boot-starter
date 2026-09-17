@@ -17,7 +17,7 @@
     <type>pom</type><scope>import</scope>
   </dependency></dependencies></dependencyManagement>
   <dependencies><dependency>
-    <groupId>io.github.madduck-tech</groupId><artifactId>ydb-spring-boot-starter</artifactId><version>0.1.0-SNAPSHOT</version>
+    <groupId>io.github.madduck-tech</groupId><artifactId>ydb-spring-boot-starter</artifactId><version>0.1.0</version>
   </dependency></dependencies>
   <build><plugins>
     <plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-compiler-plugin</artifactId><version>3.14.1</version></plugin>

@@ -11,4 +11,5 @@ dependencies {
     annotationProcessor("org.springframework.boot:spring-boot-autoconfigure-processor:$bootVersion")
     testImplementation("org.springframework.boot:spring-boot-test")
     testImplementation("org.springframework.boot:spring-boot-health")
+    testImplementation("com.fasterxml.jackson.core:jackson-annotations")
 }

@@ -1,6 +1,5 @@
 package io.github.madducktech.ydb.boot;
 
-import java.util.concurrent.Executors;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.FilteredClassLoader;
